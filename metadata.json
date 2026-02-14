@@ -1,0 +1,8 @@
+{
+  "name": "Ask Maps AI",
+  "description": "An AI-powered conversational interface for Google Maps that uses Gemini to provide recommendations, directions, and insights through natural language.",
+  "requestFramePermissions": [
+    "geolocation",
+    "microphone"
+  ]
+}
