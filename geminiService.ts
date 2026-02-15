@@ -1,4 +1,3 @@
-
 import { GoogleGenAI, GenerateContentResponse, Type, FunctionDeclaration } from "@google/genai";
 import { Location, GroundingLink } from "./types";
 
@@ -66,7 +65,7 @@ export const askMaps = async (
     const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const dayName = now.toLocaleDateString([], { weekday: 'long' });
 
-    // Note: We use gemini-2.0-flash for grounding support.
+    // Note: We use gemini-2.5-flash for grounding support.
     const config: any = {
       tools: [
         { googleMaps: {} }
@@ -104,7 +103,7 @@ export const askMaps = async (
     }
 
     const response: GenerateContentResponse = await ai.models.generateContent({
-      model: "gemini-2.0-flash", 
+      model: "gemini-2.5-flash", 
       contents: contents,
       config: config
     });
