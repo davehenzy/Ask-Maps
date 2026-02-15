@@ -23,6 +23,7 @@ export interface Message {
     stops: string[];
     steps: RouteStep[];
     duration?: string;
+    distance?: string;
   };
   isLoading?: boolean;
 }

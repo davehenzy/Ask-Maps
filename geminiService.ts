@@ -8,13 +8,13 @@ const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 export const mapTools: FunctionDeclaration[] = [
   {
     name: 'update_map_view',
-    description: 'Adjust the map zoom level or focus on a specific area.',
+    description: 'Adjust the map zoom level or move to a specific coordinate.',
     parameters: {
       type: Type.OBJECT,
       properties: {
-        zoom: { type: Type.NUMBER, description: 'Zoom level from 1 to 5.' },
-        focusX: { type: Type.NUMBER, description: 'Center X coordinate (0-100).' },
-        focusY: { type: Type.NUMBER, description: 'Center Y coordinate (0-100).' }
+        zoom: { type: Type.NUMBER, description: 'Zoom level from 1 (World) to 18 (Street).' },
+        latitude: { type: Type.NUMBER, description: 'Target latitude.' },
+        longitude: { type: Type.NUMBER, description: 'Target longitude.' }
       }
     }
   },
@@ -66,15 +66,15 @@ export const askMaps = async (
     const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const dayName = now.toLocaleDateString([], { weekday: 'long' });
 
+    // Note: We use gemini-2.0-flash for grounding support.
     const config: any = {
       tools: [
-        { googleMaps: {} },
-        { functionDeclarations: mapTools }
+        { googleMaps: {} }
       ],
       systemInstruction: `You are 'Ask Maps', a sophisticated AI navigator. 
       Today is ${dayName} and the current local time is ${timeString}. 
       
-      Help users discover places, plan multi-stop routes, and explore maps.
+      Help users discover places, plan multi-stop routes, and explore maps using Google Maps grounding.
       
       Smart Context Awareness:
       - ANALYZE TIME: If the user is planning a trip during meal times (Breakfast: 7-9AM, Lunch: 11AM-2PM, Dinner: 6-9PM), proactively suggest highly-rated restaurant stops along their route.
@@ -82,16 +82,14 @@ export const askMaps = async (
       - ANALYZE LOCATION: Use the user's current coordinates as the starting point unless they specify otherwise.
       
       Capabilities:
-      - Search for places using Google Maps.
-      - Control the map interface (zoom, layers, traffic) when requested.
+      - Search for places using Google Maps (Grounding).
       - Plan optimized routes with logical stop orders.
-      - IMPORTANT: When providing a route, always include an estimated travel time (e.g., "Total time: 45 mins") and structured turn-by-turn steps.
+      - IMPORTANT: When providing a route, always include an estimated travel time (e.g., "Total time: 45 mins"), total distance (e.g., "Total distance: 12.5 miles"), and structured turn-by-turn steps.
       
       Interaction Rules:
-      1. If the user asks for a different view (e.g., satellite), use set_map_layer.
-      2. If they ask to zoom in or focus somewhere, use update_map_view.
-      3. Always accompany actions with a helpful text explanation.
-      4. Suggest relevant stops (meal/rest/fuel) based on ${timeString} and the journey context.`,
+      1. Suggest relevant stops (meal/rest/fuel) based on ${timeString} and the journey context.
+      2. If the user asks to control the map (zoom, layer), explain that you can help find places textually, or they can use Voice Mode for hands-free map control.
+      3. If the user explicitly asks to 'display map', 'show map', or 'hide chat', start your response with '[ACTION: SHOW_MAP]' followed by a confirmation message like "Here is the map view."`,
     };
 
     if (location) {
@@ -106,7 +104,7 @@ export const askMaps = async (
     }
 
     const response: GenerateContentResponse = await ai.models.generateContent({
-      model: "gemini-2.5-flash", 
+      model: "gemini-2.0-flash", 
       contents: contents,
       config: config
     });
