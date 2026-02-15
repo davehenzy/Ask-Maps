@@ -329,8 +329,42 @@ const LeafletMap = ({
   );
 };
 
+const NavigationTopBar = ({ currentStep }: { currentStep: RouteStep }) => {
+  const getStepIcon = (instruction: string, size: string = "w-8 h-8") => {
+    const text = instruction.toLowerCase();
+    if (text.includes('left')) return <ArrowUpLeft className={`${size} text-white`} />;
+    if (text.includes('right')) return <ArrowUpRight className={`${size} text-white`} />;
+    if (text.includes('u-turn')) return <RotateCcw className={`${size} text-white`} />;
+    if (text.includes('arrive') || text.includes('destination')) return <MapPin className={`${size} text-white`} />;
+    return <ArrowUp className={`${size} text-white`} />;
+  };
+
+  return (
+    <div className="fixed top-0 inset-x-0 z-[500] p-4 pt-4 md:pt-4 pointer-events-none flex flex-col items-center gap-2">
+       {/* Safe Warning Overlay */}
+       <div className="bg-black/60 backdrop-blur-md text-white/90 text-[10px] font-bold px-4 py-1.5 rounded-full uppercase tracking-widest shadow-lg border border-white/10 flex items-center gap-2">
+          <ShieldAlert className="w-3 h-3 text-red-400" />
+          <span>Eyes on the road • Voice mode active</span>
+       </div>
+       
+       {/* Main Turn Card */}
+       <div className="bg-[#0F9D58] w-full max-w-xl rounded-2xl shadow-2xl p-4 flex items-center gap-5 text-white pointer-events-auto border-[3px] border-white/20 animate-in slide-in-from-top-4 duration-500">
+          <div className="p-4 bg-black/10 rounded-xl border border-white/10 shrink-0">
+              {getStepIcon(currentStep.instruction, "w-10 h-10")}
+          </div>
+          <div className="flex-1 min-w-0">
+              <div className="flex items-baseline gap-2">
+                   <span className="text-4xl font-black tracking-tighter">{currentStep.distance || "0.5 mi"}</span>
+              </div>
+              <p className="text-xl font-bold leading-tight truncate mt-1">{currentStep.instruction}</p>
+          </div>
+       </div>
+    </div>
+  );
+};
+
 const RouteDirections: React.FC<{ stops: string[], steps: RouteStep[], duration?: string, distance?: string, isDrivingMode?: boolean }> = ({ stops, steps, duration, distance, isDrivingMode }) => {
-  const [isExpanded, setIsExpanded] = useState(isDrivingMode);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   const getStepIcon = (instruction: string, size: string = "w-4 h-4") => {
     const text = instruction.toLowerCase();
@@ -342,45 +376,33 @@ const RouteDirections: React.FC<{ stops: string[], steps: RouteStep[], duration?
   };
 
   if (isDrivingMode) {
-    const currentStep = steps[0] || { instruction: "Head towards your destination", distance: "0.1 mi" };
+    // Driving Mode: Trip Summary Footer (replaces the big turn card)
     return (
-      <div className="mt-4 animate-in slide-in-from-top-4 duration-500 w-full md:max-w-3xl md:mx-auto">
-        <div className="bg-white rounded-[32px] shadow-2xl border-4 border-blue-500/10 p-6 flex flex-col gap-4">
-          <div className="flex items-center gap-6">
-            <div className="p-5 bg-blue-600 rounded-[24px] text-white shadow-xl shadow-blue-500/30">
-              {getStepIcon(currentStep.instruction, "w-12 h-12")}
+      <div className="animate-in slide-in-from-bottom-4 duration-500 w-full md:max-w-3xl md:mx-auto mb-2 pointer-events-auto">
+        <div className="bg-gray-800/90 backdrop-blur-xl rounded-[24px] border border-gray-700/50 p-5 flex items-center justify-between shadow-2xl">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-green-500/20 text-green-400 rounded-2xl shrink-0">
+              <Clock className="w-6 h-6" />
             </div>
-            <div className="flex-1">
-              <p className="text-[24px] md:text-[32px] font-black leading-tight text-gray-900 tracking-tight">{currentStep.instruction}</p>
-              <div className="flex items-center gap-3 mt-1">
-                <span className="text-[20px] md:text-[24px] font-bold text-blue-600">{currentStep.distance || "NOW"}</span>
-                <span className="w-1.5 h-1.5 bg-gray-200 rounded-full" />
-                <span className="text-[16px] md:text-[18px] text-gray-400 font-bold uppercase tracking-wider">
-                  {duration || "12 min"}
-                  {distance && <span className="text-gray-300 mx-2">•</span>}
-                  {distance}
-                </span>
+            <div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-2xl font-black text-white tracking-tight">{duration || "--"}</span>
+                <span className="text-sm font-bold text-gray-400">remaining</span>
               </div>
+              <p className="text-sm font-medium text-gray-500">{distance} • {stops.length} stops</p>
             </div>
           </div>
-          <div className="pt-4 border-t border-gray-100 hidden md:block">
-            <div className="flex items-center justify-between">
-              <div className="flex -space-x-2">
-                {stops.slice(0, 3).map((stop, i) => (
-                  <div key={i} className="w-8 h-8 rounded-full bg-blue-50 border-2 border-white flex items-center justify-center text-[10px] font-bold text-blue-600">{i+1}</div>
-                ))}
-              </div>
-              <div className="flex items-center gap-4">
-                <button className="px-6 py-2 bg-gray-100 rounded-full text-sm font-bold text-gray-600">Stops</button>
-                <button className="px-6 py-2 bg-red-50 rounded-full text-sm font-bold text-red-500">Exit</button>
-              </div>
-            </div>
+          <div className="h-10 w-px bg-white/10 mx-2 hidden sm:block"></div>
+          <div className="text-right hidden sm:block">
+             <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Arrival</span>
+             <p className="text-lg font-bold text-white">12:42 PM</p>
           </div>
         </div>
       </div>
     );
   }
 
+  // Standard Plan Mode: Collapsible List
   return (
     <div className="mt-4 bg-white border border-blue-100 rounded-3xl overflow-hidden shadow-sm">
       <div className="bg-blue-50/50 p-4 flex items-center justify-between cursor-pointer active:bg-blue-100/50 transition-colors" onClick={() => setIsExpanded(!isExpanded)}>
@@ -717,14 +739,11 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* Driving Mode Indicator Overlay */}
-      {isDrivingMode && (
-        <div className="absolute top-0 inset-x-0 z-[500] pointer-events-none">
-          <div className="bg-red-600 text-white text-[10px] font-black uppercase tracking-[3px] text-center py-1.5 flex items-center justify-center gap-2">
-            <ShieldAlert className="w-3 h-3" />
-            Eyes on the road • Voice mode active
-          </div>
-        </div>
+      {/* Driving Mode Top Bar */}
+      {isDrivingMode && activeRoute && (
+         <NavigationTopBar 
+            currentStep={activeRoute.steps[0] || { instruction: "Head to destination", distance: "0 mi" }} 
+         />
       )}
 
       {/* Floating Side Tools */}
