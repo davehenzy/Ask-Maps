@@ -137,11 +137,13 @@ const createCustomIcon = (color: string, iconType: MarkerIconType, isSelected: b
 
   const html = `
     <div class="relative flex items-center justify-center transform -translate-x-1/2 -translate-y-full transition-all duration-300 ${isSelected ? 'scale-110 z-50' : 'hover:scale-110 z-10'}">
-      <div class="${size} rounded-full ${colorClass} shadow-xl ${ring} flex items-center justify-center text-white">
-        ${stopNumber 
-          ? `<span class="font-bold text-sm">${stopNumber}</span>` 
-          : svgContent
-        }
+      <div class="${isSelected ? 'animate-bounce' : ''}">
+        <div class="${size} rounded-full ${colorClass} shadow-xl ${ring} flex items-center justify-center text-white">
+          ${stopNumber 
+            ? `<span class="font-bold text-sm">${stopNumber}</span>` 
+            : svgContent
+          }
+        </div>
       </div>
       <div class="absolute bottom-0 translate-y-1 w-2 h-2 bg-black/20 blur-sm rounded-full"></div>
     </div>
@@ -402,60 +404,52 @@ const RouteDirections: React.FC<{ stops: string[], steps: RouteStep[], duration?
     );
   }
 
-  // Standard Plan Mode: Collapsible List
+  // Standard Plan Mode: Collapsible List with Prominent Header
   return (
     <div className="mt-4 bg-white border border-blue-100 rounded-3xl overflow-hidden shadow-sm">
-      <div className="bg-blue-50/50 p-4 flex items-center justify-between cursor-pointer active:bg-blue-100/50 transition-colors" onClick={() => setIsExpanded(!isExpanded)}>
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-blue-600 rounded-xl text-white">
-            <Route className="w-5 h-5" />
-          </div>
-          <div>
-            <span className="text-sm font-bold text-gray-900">Planned Route</span>
-            <div className="flex items-center gap-2 text-[11px] text-blue-600 font-bold uppercase tracking-wider">
-              <span>{stops.length} stops</span>
-              {/* Keeping header summary concise for collapsed state */}
-              {(duration || distance) && (
-                <>
-                  <span className="w-1 h-1 bg-blue-300 rounded-full" />
-                  <span className="flex items-center gap-1">
-                    <Clock className="w-3 h-3" /> 
-                    {duration}
-                    {duration && distance && " • "}
-                    {distance}
-                  </span>
-                </>
-              )}
-            </div>
-          </div>
+      {/* Prominent Trip Summary Header */}
+      {(duration || distance) ? (
+        <div className="bg-blue-50/80 p-4 border-b border-blue-100 flex items-center justify-between">
+           <div className="flex items-center gap-4">
+              <div className="bg-blue-600 text-white p-3 rounded-xl shadow-lg shadow-blue-500/20">
+                 <Car className="w-6 h-6" />
+              </div>
+              <div>
+                 <div className="flex items-baseline gap-2">
+                    <span className="text-2xl font-black text-gray-900 tracking-tight">{duration || "--"}</span>
+                    <span className="text-sm font-bold text-gray-500">driving</span>
+                 </div>
+                 <div className="text-sm text-gray-500 font-medium mt-0.5">
+                    {distance} • {stops.length} stops
+                 </div>
+              </div>
+           </div>
         </div>
-        {isExpanded ? <ChevronUp className="w-5 h-5 text-blue-400" /> : <ChevronDown className="w-5 h-5 text-blue-400" />}
+      ) : (
+        // Fallback header if no duration/distance (just stops)
+        <div className="bg-blue-50/50 p-4 flex items-center gap-3 border-b border-blue-100">
+             <div className="p-2 bg-blue-600 rounded-xl text-white">
+               <Route className="w-5 h-5" />
+             </div>
+             <div>
+                <span className="text-sm font-bold text-gray-900">Planned Route</span>
+                <div className="text-[11px] text-blue-600 font-bold uppercase tracking-wider">{stops.length} stops</div>
+             </div>
+        </div>
+      )}
+
+      {/* Expand/Collapse Toggle */}
+      <div 
+        className="p-3 bg-white flex items-center justify-center cursor-pointer hover:bg-gray-50 transition-colors gap-2 text-xs font-bold text-gray-400 uppercase tracking-widest border-b border-gray-50" 
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
+        <span>{isExpanded ? "Hide Details" : "View Route Details"}</span>
+        {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
       </div>
       
       {/* Collapsible Content */}
       <div className={`transition-all duration-300 ease-in-out ${isExpanded ? 'max-h-[800px] opacity-100' : 'max-h-0 opacity-0 overflow-hidden'}`}>
          <div className="p-4 space-y-4">
-            {/* Detailed Route Summary Block */}
-            {(duration || distance) && (
-              <div className="flex items-center justify-between bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-4 border border-blue-100/50">
-                <div className="flex flex-col gap-1">
-                  <span className="text-[10px] text-blue-400 font-black uppercase tracking-widest">Est. Duration</span>
-                  <div className="flex items-center gap-2 text-blue-900">
-                    <Clock className="w-4 h-4 text-blue-500" />
-                    <span className="text-lg font-black tracking-tight">{duration || "--"}</span>
-                  </div>
-                </div>
-                <div className="w-px h-8 bg-blue-200/50" />
-                <div className="flex flex-col gap-1 text-right">
-                  <span className="text-[10px] text-blue-400 font-black uppercase tracking-widest">Total Distance</span>
-                  <div className="flex items-center justify-end gap-2 text-blue-900">
-                    <span className="text-lg font-black tracking-tight">{distance || "--"}</span>
-                    <MapPin className="w-4 h-4 text-blue-500" />
-                  </div>
-                </div>
-              </div>
-            )}
-
             <div className="space-y-3">
               {stops.map((stop, i) => (
                 <div key={i} className="flex items-center gap-3 text-sm text-gray-700">
