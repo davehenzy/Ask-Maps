@@ -5,13 +5,16 @@ import { Location, GroundingLink } from "./types";
 let ai: GoogleGenAI | null = null;
 
 const getAiClient = () => {
+  if (!process.env.API_KEY) {
+    throw new Error("API_KEY is not defined. Please check your environment variables.");
+  }
   if (!ai) {
     ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   }
   return ai;
 };
 
-// Define map control tools for the AI
+// Define map control tools for the AI (Used in Live API)
 export const mapTools: FunctionDeclaration[] = [
   {
     name: 'update_map_view',
@@ -61,10 +64,13 @@ export const askMaps = async (
   try {
     const client = getAiClient();
     
-    const contents = history.map(h => ({
-      role: h.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: h.content }]
-    }));
+    // Sanitize history: ensure content is present and role is mapped correctly
+    const contents = history
+      .filter(h => h.content && h.content.trim().length > 0)
+      .map(h => ({
+        role: h.role === 'assistant' ? 'model' : 'user',
+        parts: [{ text: h.content }]
+      }));
 
     contents.push({
       role: 'user',
@@ -118,11 +124,23 @@ export const askMaps = async (
       config: config
     });
 
-    const text = response.text || "Searching the map for you...";
+    // Safely extract text
+    let text = "Searching the map for you...";
+    if (response.candidates && response.candidates.length > 0) {
+      try {
+        if (response.text) {
+          text = response.text;
+        }
+      } catch (e) {
+        // Fallback if text getter fails or is empty
+        console.warn("Could not extract text from response", e);
+      }
+    }
+
     const links: GroundingLink[] = [];
     const functionCalls = response.functionCalls;
 
-    // Extract grounding chunks
+    // Extract grounding chunks with robust checking
     const chunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
     if (chunks && Array.isArray(chunks)) {
       chunks.forEach((chunk: any) => {
@@ -137,7 +155,7 @@ export const askMaps = async (
 
     return { text, links, functionCalls };
   } catch (error) {
-    console.error("Gemini API Error:", error);
+    console.error("Gemini API Error details:", error);
     throw error;
   }
 };

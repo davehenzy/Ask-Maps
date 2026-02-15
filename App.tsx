@@ -6,7 +6,7 @@ import {
   Route, Train, Mountain, Image as ImageIcon, Check, Heart, Coffee, 
   Utensils, Palette, Plus, Minus, MessageSquare, Waves, ArrowRight, 
   ArrowUp, RotateCcw, ArrowUpRight, ArrowUpLeft, Settings, ShieldAlert, 
-  Phone, Globe
+  Phone, Globe, AlertCircle
 } from 'lucide-react';
 import { GoogleGenAI, Modality } from '@google/genai';
 import { MapContainer, TileLayer, Marker, Popup, useMap, ZoomControl } from 'react-leaflet';
@@ -564,7 +564,11 @@ const App: React.FC = () => {
     setIsChatOpen(true);
     setIsProcessing(true);
     try {
-      const history = messages.map(m => ({ role: m.role, content: m.content }));
+      // Filter out messages that look like error reports or have empty content to avoid confusing the model
+      const history = messages
+        .filter(m => !m.content.startsWith('Error:'))
+        .map(m => ({ role: m.role, content: m.content }));
+        
       const { text, links, functionCalls } = await askMaps(finalInput, userLocation, history);
       
       let displayText = text;
@@ -605,8 +609,10 @@ const App: React.FC = () => {
         setActiveMarkers(prev => [...prev, ...newMarkers]);
       }
       setMessages(prev => [...prev, { role: 'assistant', content: displayText, links, route: routeData }]);
-    } catch (error) {
-      setMessages(prev => [...prev, { role: 'assistant', content: "Something went wrong. Let's try again." }]);
+    } catch (error: any) {
+      console.error("Chat Error:", error);
+      const errorMessage = error.message || error.toString();
+      setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${errorMessage}. Please check your API key or try again.` }]);
     } finally { setIsProcessing(false); }
   };
 
@@ -879,8 +885,16 @@ const App: React.FC = () => {
                 )}
                 {messages.map((msg, idx) => (
                   <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-in slide-in-from-bottom-2`}>
-                    <div className={`max-w-[85%] rounded-[24px] p-5 ${msg.role === 'user' ? 'bg-blue-600 text-white rounded-br-none' : 'bg-gray-50 border border-gray-100 text-gray-800 rounded-bl-none shadow-sm'}`}>
-                      <p className="text-[16px] leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                    <div className={`max-w-[85%] rounded-[24px] p-5 ${msg.role === 'user' ? 'bg-blue-600 text-white rounded-br-none' : (msg.content.startsWith('Error:') ? 'bg-red-50 border border-red-100 text-red-700 rounded-bl-none' : 'bg-gray-50 border border-gray-100 text-gray-800 rounded-bl-none shadow-sm')}`}>
+                      {msg.content.startsWith('Error:') ? (
+                        <div className="flex items-start gap-2">
+                           <AlertCircle className="w-5 h-5 shrink-0" />
+                           <p className="text-[15px] font-medium leading-relaxed">{msg.content}</p>
+                        </div>
+                      ) : (
+                        <p className="text-[16px] leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                      )}
+                      
                       {msg.route && <RouteDirections stops={msg.route.stops} steps={msg.route.steps} duration={msg.route.duration} distance={msg.route.distance} />}
                       {msg.links && msg.links.length > 0 && (
                         <div className="mt-4 flex flex-wrap gap-2 pt-4 border-t border-gray-200/50">
