@@ -1,7 +1,15 @@
 import { GoogleGenAI, GenerateContentResponse, Type, FunctionDeclaration } from "@google/genai";
 import { Location, GroundingLink } from "./types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Initialize lazily to avoid top-level failures
+let ai: GoogleGenAI | null = null;
+
+const getAiClient = () => {
+  if (!ai) {
+    ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  }
+  return ai;
+};
 
 // Define map control tools for the AI
 export const mapTools: FunctionDeclaration[] = [
@@ -51,6 +59,8 @@ export const askMaps = async (
   history: { role: string; content: string }[] = []
 ): Promise<{ text: string; links: GroundingLink[]; functionCalls?: any[] }> => {
   try {
+    const client = getAiClient();
+    
     const contents = history.map(h => ({
       role: h.role === 'assistant' ? 'model' : 'user',
       parts: [{ text: h.content }]
@@ -102,7 +112,7 @@ export const askMaps = async (
       };
     }
 
-    const response: GenerateContentResponse = await ai.models.generateContent({
+    const response: GenerateContentResponse = await client.models.generateContent({
       model: "gemini-2.5-flash", 
       contents: contents,
       config: config
